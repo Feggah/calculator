@@ -1,0 +1,2 @@
+windows:
+	fyne-cross windows
