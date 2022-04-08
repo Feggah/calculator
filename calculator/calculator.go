@@ -8,6 +8,8 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	"github.com/Feggah/calculator/printer"
+	"github.com/Feggah/calculator/utils"
 	"github.com/Knetic/govaluate"
 )
 
@@ -124,6 +126,18 @@ func (c *Calculator) onTypedChar(char rune) {
 	if string(char) == "," {
 		char = '.'
 	}
+	if utils.ByteInSlice(byte(char), utils.Operators) {
+		if len(c.output.Text) == 0 {
+			return
+		}
+
+		lastChar := c.output.Text[len(c.output.Text)-1]
+		if byte(char) == lastChar {
+			c.backspace()
+		} else if utils.ByteInSlice(lastChar, utils.Operators) {
+			c.backspace()
+		}
+	}
 	if button, ok := c.buttons[string(char)]; ok {
 		button.OnTapped()
 	}
@@ -201,5 +215,16 @@ func (c *Calculator) configureWindow(app fyne.App) {
 	c.window.Canvas().SetOnTypedRune(c.onTypedChar)
 	c.window.Canvas().SetOnTypedKey(c.onTypedKey)
 	c.window.Resize(fyne.NewSize(450, 500))
+	c.configureMenu()
 	c.window.Show()
+}
+
+func (c *Calculator) configureMenu() {
+	item := fyne.NewMenuItem("Imprimir", func() {
+		p := printer.NewPrinter(c.window, c.lastEquation)
+		p.SetTitle()
+	})
+	menu := fyne.NewMenu("Arquivo", item)
+	main := fyne.NewMainMenu(menu)
+	c.window.SetMainMenu(main)
 }

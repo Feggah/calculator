@@ -1,2 +1,2 @@
 windows:
-	fyne-cross windows
+	fyne-cross windows -ldflags -H=windowsgui
