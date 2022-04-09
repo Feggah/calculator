@@ -74,6 +74,7 @@ func (c *Calculator) addCharacterButton(char rune) *widget.Button {
 
 func (c *Calculator) charCallback(char rune) {
 	c.validateCurrentDisplay()
+	c.validateLastOperator(char)
 	c.display(c.equation + string(char))
 }
 
@@ -85,6 +86,21 @@ func (c *Calculator) display(content string) {
 
 func (c *Calculator) clear() {
 	c.display("")
+}
+
+func (c *Calculator) validateLastOperator(char rune) {
+	if utils.ByteInSlice(byte(char), utils.Operators) {
+		if len(c.output.Text) == 0 {
+			return
+		}
+
+		lastChar := c.output.Text[len(c.output.Text)-1]
+		if byte(char) == lastChar {
+			c.backspace()
+		} else if utils.ByteInSlice(lastChar, utils.Operators) {
+			c.backspace()
+		}
+	}
 }
 
 func (c *Calculator) validateCurrentDisplay() {
@@ -126,18 +142,6 @@ func (c *Calculator) onTypedChar(char rune) {
 	if string(char) == "," {
 		char = '.'
 	}
-	if utils.ByteInSlice(byte(char), utils.Operators) {
-		if len(c.output.Text) == 0 {
-			return
-		}
-
-		lastChar := c.output.Text[len(c.output.Text)-1]
-		if byte(char) == lastChar {
-			c.backspace()
-		} else if utils.ByteInSlice(lastChar, utils.Operators) {
-			c.backspace()
-		}
-	}
 	if button, ok := c.buttons[string(char)]; ok {
 		button.OnTapped()
 	}
@@ -145,8 +149,27 @@ func (c *Calculator) onTypedChar(char rune) {
 
 func (c *Calculator) onTypedKey(key *fyne.KeyEvent) {
 	if key.Name == fyne.KeyReturn || key.Name == fyne.KeyEnter {
+		if !c.isEquation() {
+			return
+		}
+		c.removeLastOperator()
 		c.evaluate()
 	} else if key.Name == fyne.KeyBackspace {
+		c.backspace()
+	}
+}
+
+func (c *Calculator) isEquation() bool {
+	for _, v := range c.output.Text {
+		if utils.ByteInSlice(byte(v), utils.Operators) {
+			return true
+		}
+	}
+	return false
+}
+
+func (c *Calculator) removeLastOperator() {
+	if utils.ByteInSlice(c.output.Text[len(c.output.Text)-1], utils.Operators) {
 		c.backspace()
 	}
 }

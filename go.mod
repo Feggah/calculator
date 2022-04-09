@@ -5,6 +5,7 @@ go 1.18
 require (
 	fyne.io/fyne/v2 v2.1.4
 	github.com/Knetic/govaluate v3.0.0+incompatible
+	github.com/alexbrainman/printer v0.0.0-20200912035444-f40f26f0bdeb
 )
 
 require (
