@@ -63,7 +63,7 @@ func (c *Calculator) addNumericButton(number int) *widget.Button {
 }
 
 func (c *Calculator) numericCallback(number int) {
-	c.validateCurrentDisplay()
+	c.removeExpressionInvalidMessage()
 	c.display(c.equation + strconv.Itoa(number))
 }
 
@@ -73,8 +73,19 @@ func (c *Calculator) addCharacterButton(char rune) *widget.Button {
 }
 
 func (c *Calculator) charCallback(char rune) {
-	c.validateCurrentDisplay()
-	c.validateLastOperator(char)
+	c.removeExpressionInvalidMessage()
+	if utils.ByteInSlice(byte(char), utils.Operators) {
+		if len(c.output.Text) == 0 {
+			return
+		}
+
+		lastChar := c.output.Text[len(c.output.Text)-1]
+		if byte(char) == lastChar {
+			c.backspace()
+		} else if utils.ByteInSlice(lastChar, utils.Operators) {
+			c.backspace()
+		}
+	}
 	c.display(c.equation + string(char))
 }
 
@@ -88,22 +99,7 @@ func (c *Calculator) clear() {
 	c.display("")
 }
 
-func (c *Calculator) validateLastOperator(char rune) {
-	if utils.ByteInSlice(byte(char), utils.Operators) {
-		if len(c.output.Text) == 0 {
-			return
-		}
-
-		lastChar := c.output.Text[len(c.output.Text)-1]
-		if byte(char) == lastChar {
-			c.backspace()
-		} else if utils.ByteInSlice(lastChar, utils.Operators) {
-			c.backspace()
-		}
-	}
-}
-
-func (c *Calculator) validateCurrentDisplay() {
+func (c *Calculator) removeExpressionInvalidMessage() {
 	if strings.Contains(c.output.Text, errEquationExpressionInvalid) {
 		c.clear()
 	}
@@ -150,6 +146,8 @@ func (c *Calculator) onTypedChar(char rune) {
 func (c *Calculator) onTypedKey(key *fyne.KeyEvent) {
 	if key.Name == fyne.KeyReturn || key.Name == fyne.KeyEnter {
 		if !c.isEquation() {
+			// We don't need to evaluate if there isn't a equation in
+			// the calculator display
 			return
 		}
 		c.removeLastOperator()
@@ -245,7 +243,7 @@ func (c *Calculator) configureWindow(app fyne.App) {
 func (c *Calculator) configureMenu() {
 	item := fyne.NewMenuItem("Imprimir", func() {
 		p := printer.NewPrinter(c.window, c.lastEquation)
-		p.SetTitle()
+		p.ShowPrinterPopUp()
 	})
 	menu := fyne.NewMenu("Arquivo", item)
 	main := fyne.NewMainMenu(menu)
