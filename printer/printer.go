@@ -3,6 +3,8 @@ package printer
 import (
 	"time"
 
+	_ "time/tzdata"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
@@ -23,9 +25,6 @@ type Printer struct {
 	// Content of the document
 	content string
 
-	// Timestamp when the document was printed
-	timestamp string
-
 	// Current window configuration.
 	// Used to manage the pop-up
 	window fyne.Window
@@ -33,9 +32,8 @@ type Printer struct {
 
 func NewPrinter(w fyne.Window, c string) *Printer {
 	return &Printer{
-		window:    w,
-		content:   c,
-		timestamp: getLocalTimestamp(),
+		window:  w,
+		content: c,
 	}
 }
 
@@ -85,8 +83,20 @@ func (p *Printer) print() {
 		return
 	}
 
-	content := "Titulo: " + p.title + "\n" + "Horario: " + p.timestamp + "\n\n" + parsedContent
+	err = prt.StartPage()
+	if err != nil {
+		p.showErrorPopUp(err)
+		return
+	}
+
+	content := "Titulo: " + p.title + "\n" + "Horario: " + getLocalTimestamp() + "\n\n" + parsedContent
 	_, err = prt.Write([]byte(content))
+	if err != nil {
+		p.showErrorPopUp(err)
+		return
+	}
+
+	err = prt.EndPage()
 	if err != nil {
 		p.showErrorPopUp(err)
 		return
@@ -157,7 +167,10 @@ func parseContent(content string) string {
 }
 
 func getLocalTimestamp() string {
-	loc, _ := time.LoadLocation(timezone)
+	loc, err := time.LoadLocation(timezone)
+	if err != nil {
+		return errPrinter + " 'Error when getting the local timezone location'"
+	}
 	t := time.Now().In(loc)
 	return t.Format("02/01/2006 15:04")
 }
