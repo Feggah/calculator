@@ -1,6 +1,7 @@
 package printer
 
 import (
+	"fmt"
 	"time"
 
 	_ "time/tzdata"
@@ -76,42 +77,16 @@ func (p *Printer) print() {
 		p.showErrorPopUp(err)
 		return
 	}
+	defer prt.Close()
 
-	err = prt.StartRawDocument(p.title)
-	if err != nil {
+	if err := prt.StartRawDocument(p.title); err != nil {
 		p.showErrorPopUp(err)
 		return
 	}
-
-	err = prt.StartPage()
-	if err != nil {
-		p.showErrorPopUp(err)
-		return
-	}
+	defer prt.EndDocument()
 
 	content := "Titulo: " + p.title + "\n" + "Horario: " + getLocalTimestamp() + "\n\n" + parsedContent
-	_, err = prt.Write([]byte(content))
-	if err != nil {
-		p.showErrorPopUp(err)
-		return
-	}
-
-	err = prt.EndPage()
-	if err != nil {
-		p.showErrorPopUp(err)
-		return
-	}
-
-	err = prt.EndDocument()
-	if err != nil {
-		p.showErrorPopUp(err)
-		return
-	}
-	err = prt.Close()
-	if err != nil {
-		p.showErrorPopUp(err)
-		return
-	}
+	fmt.Fprintf(prt, "%s", content)
 }
 
 func (p *Printer) showErrorPopUp(err error) {
