@@ -1,2 +1,2 @@
 windows:
-	fyne package -os windows -icon Icon.png
+	fyne package -os windows -icon img/Icon.png
