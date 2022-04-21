@@ -1,7 +1,8 @@
 package printer
 
 import (
-	"fmt"
+	"os"
+	"os/exec"
 	"time"
 
 	_ "time/tzdata"
@@ -11,7 +12,6 @@ import (
 	"fyne.io/fyne/v2/widget"
 
 	"github.com/Feggah/calculator/utils"
-	"github.com/alexbrainman/printer"
 )
 
 const (
@@ -65,28 +65,32 @@ func (p *Printer) ShowPrinterPopUp() {
 }
 
 func (p *Printer) print() {
-	parsedContent := parseContent(p.content)
-	name, err := printer.Default()
+	content := "Titulo: " + p.title + "\n" + "Horario: " + getLocalTimestamp() + "\n\n" + parseContent(p.content)
+
+	file, err := os.CreateTemp("", p.title)
 	if err != nil {
 		p.showErrorPopUp(err)
 		return
 	}
 
-	prt, err := printer.Open(name)
-	if err != nil {
+	defer func() {
+		file.Close()
+		if err := os.Remove(file.Name()); err != nil {
+			p.showErrorPopUp(err)
+			return
+		}
+	}()
+
+	if _, err := file.WriteString(content); err != nil {
 		p.showErrorPopUp(err)
 		return
 	}
-	defer prt.Close()
 
-	if err := prt.StartRawDocument(p.title); err != nil {
+	cmd := exec.Command("cmd.exe", "/C", "notepad", "/p", file.Name())
+	if err := cmd.Run(); err != nil {
 		p.showErrorPopUp(err)
 		return
 	}
-	defer prt.EndDocument()
-
-	content := "Titulo: " + p.title + "\n" + "Horario: " + getLocalTimestamp() + "\n\n" + parsedContent
-	fmt.Fprintf(prt, "%s", content)
 }
 
 func (p *Printer) showErrorPopUp(err error) {
