@@ -1,6 +1,7 @@
 package printer
 
 import (
+	"errors"
 	"os"
 	"os/exec"
 	"time"
@@ -15,8 +16,8 @@ import (
 )
 
 const (
-	timezone   = "America/Sao_Paulo"
-	errPrinter = "Um erro inesperado ocorreu, entre em contato com um administrador."
+	timezone = "America/Sao_Paulo"
+	errEmpty = "não existe nenhuma conta registrada. Tente novamente depois de efetuar uma conta"
 )
 
 type Printer struct {
@@ -31,11 +32,14 @@ type Printer struct {
 	window fyne.Window
 }
 
-func NewPrinter(w fyne.Window, c string) *Printer {
+func NewPrinter(w fyne.Window, c string) (*Printer, error) {
+	if c == "" {
+		return nil, errors.New(errEmpty)
+	}
 	return &Printer{
 		window:  w,
 		content: c,
-	}
+	}, nil
 }
 
 func (p *Printer) ShowPrinterPopUp() {
@@ -69,65 +73,28 @@ func (p *Printer) print() {
 
 	file, err := os.CreateTemp("", p.title)
 	if err != nil {
-		p.showErrorPopUp(err)
+		utils.ShowErrorPopUp(p.window, err)
 		return
 	}
 
 	defer func() {
 		file.Close()
 		if err := os.Remove(file.Name()); err != nil {
-			p.showErrorPopUp(err)
+			utils.ShowErrorPopUp(p.window, err)
 			return
 		}
 	}()
 
 	if _, err := file.WriteString(content); err != nil {
-		p.showErrorPopUp(err)
+		utils.ShowErrorPopUp(p.window, err)
 		return
 	}
 
 	cmd := exec.Command("cmd.exe", "/C", "notepad", "/p", file.Name())
 	if err := cmd.Run(); err != nil {
-		p.showErrorPopUp(err)
+		utils.ShowErrorPopUp(p.window, err)
 		return
 	}
-}
-
-func (p *Printer) showErrorPopUp(err error) {
-	var modal *widget.PopUp
-	ok := widget.NewButton("Ok", func() {
-		modal.Hide()
-	})
-	ok.Importance = widget.HighImportance
-
-	errMessage := &widget.Label{
-		TextStyle: fyne.TextStyle{Monospace: true},
-		Wrapping:  fyne.TextWrapWord,
-		Text:      errPrinter,
-	}
-
-	errDetailed := &widget.Label{
-		Text:      "Causa do erro: " + err.Error(),
-		Wrapping:  fyne.TextWrapWord,
-		TextStyle: fyne.TextStyle{Italic: true},
-	}
-
-	errTitle := &widget.Label{
-		Text:      "Erro",
-		TextStyle: fyne.TextStyle{Bold: true},
-	}
-
-	modal = widget.NewModalPopUp(
-		container.NewVBox(
-			errTitle,
-			errMessage,
-			errDetailed,
-			ok,
-		),
-		p.window.Canvas(),
-	)
-	modal.Resize(fyne.NewSize(300, 200))
-	modal.Show()
 }
 
 func parseContent(content string) string {
@@ -148,7 +115,7 @@ func parseContent(content string) string {
 func getLocalTimestamp() string {
 	loc, err := time.LoadLocation(timezone)
 	if err != nil {
-		return errPrinter + " 'Error when getting the local timezone location'"
+		return utils.ErrUnexpected + " 'Error when getting the local timezone location'"
 	}
 	t := time.Now().In(loc)
 	return t.Format("02/01/2006 15:04")

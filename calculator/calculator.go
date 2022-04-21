@@ -6,6 +6,7 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/driver/desktop"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/Feggah/calculator/printer"
@@ -96,6 +97,7 @@ func (c *Calculator) display(content string) {
 }
 
 func (c *Calculator) clear() {
+	c.lastEquation = ""
 	c.display("")
 }
 
@@ -233,6 +235,10 @@ func (c *Calculator) configureWindow(app fyne.App) {
 		),
 	)
 
+	ctrlP := desktop.CustomShortcut{KeyName: fyne.KeyP, Modifier: desktop.ControlModifier}
+	c.window.Canvas().AddShortcut(&ctrlP, func(shortcut fyne.Shortcut) {
+		c.printCallback()
+	})
 	c.window.Canvas().SetOnTypedRune(c.onTypedChar)
 	c.window.Canvas().SetOnTypedKey(c.onTypedKey)
 	c.window.Resize(fyne.NewSize(450, 500))
@@ -241,11 +247,17 @@ func (c *Calculator) configureWindow(app fyne.App) {
 }
 
 func (c *Calculator) configureMenu() {
-	item := fyne.NewMenuItem("Imprimir", func() {
-		p := printer.NewPrinter(c.window, c.lastEquation)
-		p.ShowPrinterPopUp()
-	})
+	item := fyne.NewMenuItem("Imprimir (CTRL + P)", c.printCallback)
 	menu := fyne.NewMenu("Arquivo", item)
 	main := fyne.NewMainMenu(menu)
 	c.window.SetMainMenu(main)
+}
+
+func (c *Calculator) printCallback() {
+	p, err := printer.NewPrinter(c.window, c.lastEquation)
+	if err != nil {
+		utils.ShowErrorPopUp(c.window, err)
+		return
+	}
+	p.ShowPrinterPopUp()
 }
